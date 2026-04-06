@@ -34,7 +34,7 @@ export default function Game() {
     window.addEventListener("resize", sz);
 
     const G = {
-      run: false, sc: 0, tk: 0, spd: 5, lane: 1, tgtLane: 1,
+      run: false, sc: 0, tk: 0, spd: 2.2, lane: 1, tgtLane: 1,
       px: 0, py: 0, jmpV: 0, jmp: false, obs: [], col: [], ptc: [],
       dist: 0, best: 0, multi: 1, mTimer: 0,
     };
@@ -212,7 +212,7 @@ export default function Game() {
       const s = G.spd * dt * 60;
       G.dist += s;
       G.sc += Math.round(s * G.multi);
-      G.spd = 5 + G.dist * 0.0008;
+      G.spd = 2.2 + G.dist * 0.0004;
       if (G.mTimer > 0) { G.mTimer -= dt; if (G.mTimer <= 0) G.multi = 1; }
 
       if (G.jmp) { G.jmpV += 28 * dt; G.py += G.jmpV; if (G.py >= 0) { G.py = 0; G.jmp = false; G.jmpV = 0; } }
@@ -284,7 +284,7 @@ export default function Game() {
     }
 
     function start() {
-      G.run = true; G.sc = 0; G.tk = 0; G.spd = 5; G.lane = 1; G.tgtLane = 1;
+      G.run = true; G.sc = 0; G.tk = 0; G.spd = 2.2; G.lane = 1; G.tgtLane = 1;
       G.px = laneX(1); G.py = 0; G.jmpV = 0; G.jmp = false;
       G.obs = []; G.col = []; G.ptc = []; G.dist = 0; G.multi = 1; G.mTimer = 0;
       splashRef.current.style.display = "none";
