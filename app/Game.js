@@ -34,7 +34,7 @@ export default function Game() {
     window.addEventListener("resize", sz);
 
     const G = {
-      run: false, sc: 0, tk: 0, spd: 1.4, lane: 1, tgtLane: 1,
+      run: false, sc: 0, tk: 0, spd: 0.8, lane: 1, tgtLane: 1,
       px: 0, py: 0, jmpV: 0, jmp: false, obs: [], col: [], ptc: [],
       dist: 0, best: 0, multi: 1, mTimer: 0,
     };
@@ -213,10 +213,10 @@ export default function Game() {
       const s = G.spd * dt * 60;
       G.dist += s;
       G.sc += Math.round(s * G.multi);
-      G.spd = 1.4 + G.dist * 0.0003;
+      G.spd = 0.8 + G.dist * 0.0002;
       if (G.mTimer > 0) { G.mTimer -= dt; if (G.mTimer <= 0) G.multi = 1; }
 
-      if (G.jmp) { G.jmpV += 28 * dt; G.py += G.jmpV; if (G.py >= 0) { G.py = 0; G.jmp = false; G.jmpV = 0; } }
+      if (G.jmp) { G.jmpV += 20 * dt; G.py += G.jmpV; if (G.py >= 0) { G.py = 0; G.jmp = false; G.jmpV = 0; } }
 
       G.px = lerp(G.px, laneX(G.tgtLane), 8 * dt);
 
@@ -285,7 +285,7 @@ export default function Game() {
     }
 
     function start() {
-      G.run = true; G.sc = 0; G.tk = 0; G.spd = 1.4; G.lane = 1; G.tgtLane = 1;
+      G.run = true; G.sc = 0; G.tk = 0; G.spd = 0.8; G.lane = 1; G.tgtLane = 1;
       G.px = laneX(1); G.py = 0; G.jmpV = 0; G.jmp = false;
       G.obs = []; G.col = []; G.ptc = []; G.dist = 0; G.multi = 1; G.mTimer = 0;
       splashRef.current.style.display = "none";
@@ -312,7 +312,7 @@ export default function Game() {
         else if (rx > (W * 2) / 3 && G.tgtLane < 2) G.tgtLane++;
         return;
       }
-      if (Math.abs(dy) > Math.abs(dx) && dy < -30) { if (!G.jmp) { G.jmp = true; G.jmpV = -14; } }
+      if (Math.abs(dy) > Math.abs(dx) && dy < -30) { if (!G.jmp) { G.jmp = true; G.jmpV = -6; } }
       else if (dx > 30 && G.tgtLane < 2) G.tgtLane++;
       else if (dx < -30 && G.tgtLane > 0) G.tgtLane--;
     }, { passive: false });
@@ -321,7 +321,7 @@ export default function Game() {
       if (!G.run) return;
       if (e.key === "ArrowLeft" && G.tgtLane > 0) G.tgtLane--;
       if (e.key === "ArrowRight" && G.tgtLane < 2) G.tgtLane++;
-      if ((e.key === "ArrowUp" || e.key === " ") && !G.jmp) { G.jmp = true; G.jmpV = -14; }
+      if ((e.key === "ArrowUp" || e.key === " ") && !G.jmp) { G.jmp = true; G.jmpV = -6; }
     }
     document.addEventListener("keydown", handleKeydown);
 
