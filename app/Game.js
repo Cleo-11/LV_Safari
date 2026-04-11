@@ -126,22 +126,6 @@ export default function Game() {
       cx.save();
       cx.translate(G.px, by + bob);
 
-      // LV trunk on back (drawn behind player)
-      cx.save();
-      cx.translate(0, -28);
-      cx.fillStyle = "#5c3a1e";
-      cx.beginPath(); cx.roundRect(-18, -14, 36, 26, 3); cx.fill();
-      cx.strokeStyle = "#d4a44a"; cx.lineWidth = 1.5; cx.stroke();
-      cx.fillStyle = "#d4a44a";
-      cx.fillRect(-16, -12, 32, 2.5);
-      cx.fillRect(-16, 9, 32, 2.5);
-      cx.fillRect(-16, -1, 32, 2);
-      cx.font = "bold 9px sans-serif"; cx.textAlign = "center"; cx.fillStyle = "#d4a44a";
-      cx.fillText("LV", 0, 6);
-      cx.fillStyle = "#8b6914";
-      cx.beginPath(); cx.roundRect(-4, -18, 8, 5, 2); cx.fill();
-      cx.restore();
-
       // Head
       cx.fillStyle = "#f5d5a0";
       cx.beginPath(); cx.arc(0, -54, 10, 0, Math.PI * 2); cx.fill();
@@ -179,6 +163,28 @@ export default function Game() {
       cx.fillStyle = "#2a1a08";
       cx.fillRect(-10, -4 + legKick, 10, 5);
       cx.fillRect(1, -4 - legKick, 10, 5);
+
+      // LV trunk — drawn LAST so it's always visible on the player's back
+      // Shoulder straps
+      cx.fillStyle = "#8b6914";
+      cx.fillRect(-10, -44, 4, 22);
+      cx.fillRect(6, -44, 4, 22);
+      // Trunk body
+      cx.fillStyle = "#5c3a1e";
+      cx.beginPath(); cx.roundRect(-13, -44, 26, 22, 3); cx.fill();
+      // Gold border
+      cx.strokeStyle = "#d4a44a"; cx.lineWidth = 1.8; cx.stroke();
+      // Gold horizontal stripes
+      cx.fillStyle = "#d4a44a";
+      cx.fillRect(-11, -42, 22, 2);
+      cx.fillRect(-11, -34, 22, 2);
+      cx.fillRect(-11, -26, 22, 2);
+      // LV monogram centre
+      cx.font = "bold 10px sans-serif"; cx.textAlign = "center"; cx.fillStyle = "#d4a44a";
+      cx.fillText("LV", 0, -31);
+      // Trunk clasp
+      cx.fillStyle = "#b8860b";
+      cx.beginPath(); cx.roundRect(-4, -47, 8, 5, 2); cx.fill();
 
       cx.restore();
     }
