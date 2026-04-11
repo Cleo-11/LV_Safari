@@ -34,8 +34,12 @@ export default function Game() {
     window.addEventListener("resize", sz);
 
     /* ---- constants ---- */
-    const HORIZON = 0.28;
-    const PLAYER_Z = 0.88;
+    const TOP_PAD = 60;
+    const ROAD_LEFT = () => W * 0.08;
+    const ROAD_RIGHT = () => W * 0.92;
+    const ROAD_W = () => ROAD_RIGHT() - ROAD_LEFT();
+    const LANE_W = () => ROAD_W() / 3;
+    const PLAYER_Y_RATIO = 0.82;
     const ITEM_TYPES = [
       { name: "handbag", accent: "#d4a44a" },
       { name: "heels", accent: "#ff5252" },
@@ -46,117 +50,81 @@ export default function Game() {
     ];
 
     const G = {
-      run: false, sc: 0, tk: 0, spd: 0.7,
-      lane: 1, tgtLane: 1, px: 0, py: 0,
+      run: false, sc: 0, tk: 0, spd: 3.5,
+      lane: 1, tgtLane: 1, px: 0, playerY: 0,
       jmpV: 0, jmp: false,
       obs: [], col: [], ptc: [],
       dist: 0, best: 0, multi: 1, mTimer: 0,
     };
 
-    /* ---- 3D projection helpers ---- */
+    /* ---- helpers ---- */
     function lerp(a, b, t) { return a + (b - a) * t; }
 
-    function proj(z) {
-      const t = Math.max(0, Math.min(1, z));
-      const y = H * HORIZON + t * (H - H * HORIZON);
-      const scale = 0.08 + t * 0.92;
-      return { y, scale };
+    function laneX(lane) {
+      return ROAD_LEFT() + LANE_W() * lane + LANE_W() / 2;
     }
 
-    function roadEdgeX(side, z) {
-      const p = proj(z);
-      const cX = W / 2;
-      const halfW = W * 0.48 * p.scale;
-      return side === 0 ? cX - halfW : cX + halfW;
+    function objY(scrollY) {
+      return scrollY;
     }
 
-    function laneX(lane, z) {
-      const left = roadEdgeX(0, z);
-      const right = roadEdgeX(1, z);
-      const lw = (right - left) / 3;
-      return left + lw * lane + lw / 2;
-    }
+    /* ---- static background ---- */
+    function drawBackground() {
+      // Sand / ground
+      cx.fillStyle = "#e8c872";
+      cx.fillRect(0, 0, W, H);
 
-    /* ---- static sky / background ---- */
-    function drawSky() {
-      const grad = cx.createLinearGradient(0, 0, 0, H * HORIZON);
-      grad.addColorStop(0, "#5bb8f5");
-      grad.addColorStop(1, "#a8d8f0");
-      cx.fillStyle = grad;
-      cx.fillRect(0, 0, W, H * HORIZON + 2);
+      // Side decorations
+      cx.fillStyle = "#d4b860";
+      cx.fillRect(0, 0, ROAD_LEFT(), H);
+      cx.fillRect(ROAD_RIGHT(), 0, W - ROAD_RIGHT(), H);
 
-      cx.fillStyle = "#e8a832";
-      cx.beginPath(); cx.arc(W * 0.82, H * 0.06, 16, 0, Math.PI * 2); cx.fill();
-
-      cx.fillStyle = "#3a7a28";
-      const trees = [0.04, 0.15, 0.28, 0.72, 0.86, 0.96];
-      for (const tx of trees) {
-        const bx = W * tx;
-        const by = H * HORIZON;
-        cx.fillStyle = "#5a3a1a"; cx.fillRect(bx - 2, by - 12, 4, 14);
-        cx.fillStyle = "#3a7a28";
-        cx.beginPath(); cx.arc(bx, by - 18, 10 + (tx * 7) % 5, 0, Math.PI * 2); cx.fill();
-        cx.fillStyle = "#2a6a18";
-        cx.beginPath(); cx.arc(bx - 3, by - 22, 7 + (tx * 5) % 3, 0, Math.PI * 2); cx.fill();
-      }
-
-      cx.fillStyle = "#5a9a30";
-      cx.fillRect(0, H * HORIZON - 6, W, 8);
-    }
-
-    /* ---- road with perspective ---- */
-    function drawRoad() {
-      const hY = H * HORIZON;
-
+      // Road
       cx.fillStyle = "#c49a4a";
-      cx.beginPath();
-      cx.moveTo(roadEdgeX(0, 0), hY);
-      cx.lineTo(roadEdgeX(0, 1), H);
-      cx.lineTo(roadEdgeX(1, 1), H);
-      cx.lineTo(roadEdgeX(1, 0), hY);
-      cx.closePath(); cx.fill();
+      cx.fillRect(ROAD_LEFT(), 0, ROAD_W(), H);
 
-      cx.fillStyle = "#a88030";
-      cx.beginPath();
-      const l1 = laneX(0, 0) + (laneX(1, 0) - laneX(0, 0)) / 2;
-      const l1b = laneX(0, 1) + (laneX(1, 1) - laneX(0, 1)) / 2;
-      cx.moveTo(l1 - 1, hY); cx.lineTo(l1b - 2, H); cx.lineTo(l1b + 2, H); cx.lineTo(l1 + 1, hY);
-      cx.closePath(); cx.fill();
-      cx.beginPath();
-      const l2 = laneX(1, 0) + (laneX(2, 0) - laneX(1, 0)) / 2;
-      const l2b = laneX(1, 1) + (laneX(2, 1) - laneX(1, 1)) / 2;
-      cx.moveTo(l2 - 1, hY); cx.lineTo(l2b - 2, H); cx.lineTo(l2b + 2, H); cx.lineTo(l2 + 1, hY);
-      cx.closePath(); cx.fill();
+      // Lane dividers (dashed, scroll with dist)
+      cx.strokeStyle = "rgba(90,58,26,0.35)"; cx.lineWidth = 2;
+      const divX1 = ROAD_LEFT() + LANE_W();
+      const divX2 = ROAD_LEFT() + LANE_W() * 2;
+      const dashLen = 30; const gapLen = 20; const period = dashLen + gapLen;
+      const offset = (G.dist * 4) % period;
+      cx.setLineDash([dashLen, gapLen]);
+      cx.lineDashOffset = -offset;
+      cx.beginPath(); cx.moveTo(divX1, 0); cx.lineTo(divX1, H); cx.stroke();
+      cx.beginPath(); cx.moveTo(divX2, 0); cx.lineTo(divX2, H); cx.stroke();
+      cx.setLineDash([]);
 
-      cx.strokeStyle = "rgba(90,58,26,0.18)"; cx.lineWidth = 1;
-      for (let d = 0; d < 24; d++) {
-        const z = ((d / 24) + (G.dist * 0.008) % (1 / 24)) % 1;
-        if (z > 1) continue;
-        const p = proj(z);
-        const lx = roadEdgeX(0, z);
-        const rx = roadEdgeX(1, z);
-        cx.beginPath(); cx.moveTo(lx, p.y); cx.lineTo(rx, p.y); cx.stroke();
+      // Road edges
+      cx.strokeStyle = "rgba(90,58,26,0.5)"; cx.lineWidth = 3;
+      cx.beginPath(); cx.moveTo(ROAD_LEFT(), 0); cx.lineTo(ROAD_LEFT(), H); cx.stroke();
+      cx.beginPath(); cx.moveTo(ROAD_RIGHT(), 0); cx.lineTo(ROAD_RIGHT(), H); cx.stroke();
+
+      // Side palm trees (decorative, static)
+      const palmPositions = [0.1, 0.35, 0.6, 0.85];
+      for (const py of palmPositions) {
+        for (const side of [ROAD_LEFT() / 2, ROAD_RIGHT() + (W - ROAD_RIGHT()) / 2]) {
+          const ty = H * py;
+          cx.fillStyle = "#5a3a1a"; cx.fillRect(side - 2, ty - 20, 4, 24);
+          cx.fillStyle = "#3a7a28";
+          cx.beginPath(); cx.arc(side, ty - 24, 10, 0, Math.PI * 2); cx.fill();
+          cx.fillStyle = "#2a6a18";
+          cx.beginPath(); cx.arc(side - 3, ty - 28, 7, 0, Math.PI * 2); cx.fill();
+        }
       }
-
-      cx.strokeStyle = "rgba(90,58,26,0.4)"; cx.lineWidth = 2;
-      cx.beginPath(); cx.moveTo(roadEdgeX(0, 0), hY); cx.lineTo(roadEdgeX(0, 1), H); cx.stroke();
-      cx.beginPath(); cx.moveTo(roadEdgeX(1, 0), hY); cx.lineTo(roadEdgeX(1, 1), H); cx.stroke();
     }
 
     /* ---- draw player with LV trunk ---- */
     function drawPlayer() {
-      const targetX = laneX(G.tgtLane, PLAYER_Z);
+      const targetX = laneX(G.tgtLane);
       G.px = lerp(G.px, targetX, 0.18);
-      const p = proj(PLAYER_Z);
-      const by = p.y + G.py;
-      const s = p.scale;
+      const by = H * PLAYER_Y_RATIO + G.playerY;
       const bob = Math.sin(G.dist * 0.2) * 2 * (G.jmp ? 0 : 1);
       const legKick = Math.sin(G.dist * 0.3) * 6 * (G.jmp ? 0 : 1);
       const armSwing = Math.sin(G.dist * 0.3) * 8 * (G.jmp ? 0 : 1);
 
       cx.save();
       cx.translate(G.px, by + bob);
-      cx.scale(s * 1.1, s * 1.1);
 
       // LV trunk on back (drawn behind player)
       cx.save();
@@ -215,45 +183,77 @@ export default function Game() {
       cx.restore();
     }
 
-    /* ---- obstacles (perspective-scaled, lane-based) ---- */
+    /* ---- LV-themed barricades (large, lane-based) ---- */
     function drawObstacle(o) {
-      const p = proj(o.z);
-      const x = laneX(o.lane, o.z);
-      const s = p.scale;
-      const y = p.y;
-      cx.save(); cx.translate(x, y); cx.scale(s * 1.4, s * 1.4);
-      if (o.type === 0) { // Rock
-        cx.fillStyle = "#888070";
-        cx.beginPath(); cx.moveTo(-20, 2); cx.lineTo(-10, -22); cx.lineTo(10, -26); cx.lineTo(22, 2); cx.closePath(); cx.fill();
-        cx.fillStyle = "#706858";
-        cx.beginPath(); cx.moveTo(-10, -22); cx.lineTo(10, -26); cx.lineTo(22, 2); cx.lineTo(4, 2); cx.closePath(); cx.fill();
-      } else if (o.type === 1) { // Bush
-        cx.fillStyle = "#4a7030";
-        cx.beginPath(); cx.ellipse(0, -10, 22, 14, 0, 0, Math.PI * 2); cx.fill();
-        cx.fillStyle = "#3a5820";
-        cx.beginPath(); cx.ellipse(-5, -14, 14, 10, 0, 0, Math.PI * 2); cx.fill();
-      } else { // Log
-        cx.fillStyle = "#7a5a2a";
-        cx.beginPath(); cx.ellipse(0, 0, 22, 6, 0, 0, Math.PI * 2); cx.fill();
-        cx.fillStyle = "#6a4a1a";
-        cx.beginPath(); cx.ellipse(0, -3, 22, 6, 0, 0, Math.PI); cx.fill();
-        cx.fillStyle = "#8b7a4a";
-        cx.beginPath(); cx.arc(-8, -1, 3, 0, Math.PI * 2); cx.fill();
-        cx.beginPath(); cx.arc(6, 0, 2, 0, Math.PI * 2); cx.fill();
+      const x = laneX(o.lane);
+      const y = o.screenY;
+      const bw = LANE_W() * 0.82;
+      const bh = 50;
+      cx.save(); cx.translate(x, y);
+
+      if (o.type === 0) {
+        // LV monogram crate
+        cx.fillStyle = "#5c3a1e";
+        cx.beginPath(); cx.roundRect(-bw / 2, -bh, bw, bh, 4); cx.fill();
+        cx.strokeStyle = "#d4a44a"; cx.lineWidth = 2; cx.stroke();
+        cx.fillStyle = "#d4a44a";
+        cx.fillRect(-bw / 2 + 4, -bh + 4, bw - 8, 3);
+        cx.fillRect(-bw / 2 + 4, -5, bw - 8, 3);
+        cx.font = "bold 14px sans-serif"; cx.textAlign = "center"; cx.fillStyle = "#d4a44a";
+        cx.fillText("LV", 0, -bh / 2 + 6);
+        // Monogram pattern
+        cx.fillStyle = "rgba(212,164,74,0.25)";
+        cx.font = "8px sans-serif";
+        for (let r = 0; r < 2; r++) {
+          for (let col = 0; col < 3; col++) {
+            cx.fillText("✦", -bw / 3 + col * (bw / 3), -bh + 22 + r * 14);
+          }
+        }
+      } else if (o.type === 1) {
+        // Gold stanchion barrier
+        cx.fillStyle = "#b8860b";
+        cx.fillRect(-bw / 2, -bh * 0.6, 6, bh * 0.6);
+        cx.fillRect(bw / 2 - 6, -bh * 0.6, 6, bh * 0.6);
+        // Base plates
+        cx.fillStyle = "#8b6914";
+        cx.beginPath(); cx.ellipse(-bw / 2 + 3, 0, 10, 4, 0, 0, Math.PI * 2); cx.fill();
+        cx.beginPath(); cx.ellipse(bw / 2 - 3, 0, 10, 4, 0, 0, Math.PI * 2); cx.fill();
+        // Rope
+        cx.strokeStyle = "#d4a44a"; cx.lineWidth = 3;
+        cx.beginPath();
+        cx.moveTo(-bw / 2 + 3, -bh * 0.5);
+        cx.quadraticCurveTo(0, -bh * 0.3, bw / 2 - 3, -bh * 0.5);
+        cx.stroke();
+        // Knob tops
+        cx.fillStyle = "#ffd700";
+        cx.beginPath(); cx.arc(-bw / 2 + 3, -bh * 0.6, 5, 0, Math.PI * 2); cx.fill();
+        cx.beginPath(); cx.arc(bw / 2 - 3, -bh * 0.6, 5, 0, Math.PI * 2); cx.fill();
+      } else {
+        // LV shopping bag barricade
+        cx.fillStyle = "#f5e6c8";
+        cx.beginPath(); cx.roundRect(-bw / 2, -bh, bw, bh, 2); cx.fill();
+        cx.strokeStyle = "#5c3a1e"; cx.lineWidth = 1.5; cx.stroke();
+        // Handles
+        cx.strokeStyle = "#5c3a1e"; cx.lineWidth = 2;
+        cx.beginPath(); cx.arc(-bw / 6, -bh, bw / 6, Math.PI, 0); cx.stroke();
+        cx.beginPath(); cx.arc(bw / 6, -bh, bw / 6, Math.PI, 0); cx.stroke();
+        // LV logo
+        cx.fillStyle = "#5c3a1e";
+        cx.font = "bold 16px sans-serif"; cx.textAlign = "center";
+        cx.fillText("LV", 0, -bh / 2 + 8);
+        cx.font = "7px sans-serif"; cx.fillStyle = "#8b6914";
+        cx.fillText("LOUIS VUITTON", 0, -bh / 2 + 20);
       }
       cx.restore();
     }
 
-    /* ---- luxury collectibles (perspective-scaled, lane-based) ---- */
+    /* ---- luxury collectibles (lane-based) ---- */
     function drawCollectible(c) {
-      const p = proj(c.z);
-      const x = laneX(c.lane, c.z);
-      const s = p.scale;
-      const y = p.y;
+      const x = laneX(c.lane);
+      const y = c.screenY;
       const float = Math.sin(G.dist * 0.08 + c.id) * 4;
       cx.save();
-      cx.translate(x, y - 18 * s + float * s);
-      cx.scale(s * 1.2, s * 1.2);
+      cx.translate(x, y - 18 + float);
 
       switch (c.type) {
         case 0: // Handbag
@@ -321,22 +321,22 @@ export default function Game() {
       cx.globalAlpha = 1;
     }
 
-    /* ---- spawners (lane-based) ---- */
+    /* ---- spawners (lane-based, screen-Y position) ---- */
     function spawnObs() {
       const lane = Math.floor(Math.random() * 3);
-      for (const o of G.obs) { if (o.lane === lane && o.z < 0.12) return; }
-      for (const c of G.col) { if (c.lane === lane && c.z < 0.12) return; }
-      G.obs.push({ lane, type: Math.floor(Math.random() * 3), z: -0.02 });
+      for (const o of G.obs) { if (o.lane === lane && o.screenY < -H * 0.2) return; }
+      for (const c of G.col) { if (c.lane === lane && c.screenY < -H * 0.15) return; }
+      G.obs.push({ lane, type: Math.floor(Math.random() * 3), screenY: -60 });
     }
 
     function spawnCol() {
       const lane = Math.floor(Math.random() * 3);
-      for (const o of G.obs) { if (o.lane === lane && o.z < 0.15) return; }
-      for (const c of G.col) { if (c.lane === lane && c.z < 0.15) return; }
+      for (const o of G.obs) { if (o.lane === lane && o.screenY < -H * 0.15) return; }
+      for (const c of G.col) { if (c.lane === lane && c.screenY < -H * 0.15) return; }
       G.col.push({
         lane,
         type: Math.floor(Math.random() * ITEM_TYPES.length),
-        z: -0.02,
+        screenY: -60,
         id: Math.random() * 1000,
       });
     }
@@ -353,56 +353,57 @@ export default function Game() {
       const s = G.spd * dt * 60;
       G.dist += s;
       G.sc += Math.round(s * G.multi);
-      G.spd = Math.min(0.7 + G.dist * 0.00015, 1.8);
+      G.spd = Math.min(3.5 + G.dist * 0.0005, 8);
 
       if (G.mTimer > 0) { G.mTimer -= dt; if (G.mTimer <= 0) G.multi = 1; }
 
       // Jump
       if (G.jmp) {
-        G.jmpV += 22 * dt;
-        G.py += G.jmpV;
-        if (G.py >= 0) { G.py = 0; G.jmp = false; G.jmpV = 0; }
+        G.jmpV += 600 * dt;
+        G.playerY += G.jmpV * dt;
+        if (G.playerY >= 0) { G.playerY = 0; G.jmp = false; G.jmpV = 0; }
       }
 
       // Smooth lane transition
-      G.px = lerp(G.px, laneX(G.tgtLane, PLAYER_Z), 10 * dt);
+      G.px = lerp(G.px, laneX(G.tgtLane), 10 * dt);
 
       // Spawn
-      if (Math.random() < 0.03 * s) spawnObs();
-      if (Math.random() < 0.04 * s) spawnCol();
+      if (Math.random() < 0.025 * s) spawnObs();
+      if (Math.random() < 0.035 * s) spawnCol();
 
-      // Move objects toward player
-      const zSpd = s * 0.01;
-      for (const o of G.obs) o.z += zSpd;
-      for (const c of G.col) c.z += zSpd;
+      // Move objects downward (toward player)
+      const ySpd = s * 3.5;
+      for (const o of G.obs) o.screenY += ySpd;
+      for (const c of G.col) c.screenY += ySpd;
+
+      // Player hit box Y position
+      const pY = H * PLAYER_Y_RATIO;
 
       // Collision with obstacles
-      const hitZ = 0.04;
       G.obs = G.obs.filter((o) => {
-        if (Math.abs(o.z - PLAYER_Z) < hitZ && o.lane === G.tgtLane && G.py > -20) {
+        if (Math.abs(o.screenY - pY) < 30 && o.lane === G.tgtLane && G.playerY > -40) {
           die(); return false;
         }
-        return o.z < 1.1;
+        return o.screenY < H + 80;
       });
 
       // Collision with collectibles
       G.col = G.col.filter((c) => {
-        if (Math.abs(c.z - PLAYER_Z) < 0.06 && c.lane === G.tgtLane) {
-          const cx2 = laneX(c.lane, c.z);
-          const cy2 = proj(c.z).y;
+        if (Math.abs(c.screenY - pY) < 30 && c.lane === G.tgtLane) {
+          const cx2 = laneX(c.lane);
           const type = ITEM_TYPES[c.type];
           if (c.type === 0) {
             G.tk++;
             G.multi = Math.min(G.multi + 1, 5);
             G.mTimer = 5;
-            burst(cx2, cy2 - 15, "#d4a44a", 14);
+            burst(cx2, c.screenY - 15, "#d4a44a", 14);
           } else {
             G.sc += 30 * G.multi;
-            burst(cx2, cy2 - 15, type.accent, 10);
+            burst(cx2, c.screenY - 15, type.accent, 10);
           }
           return false;
         }
-        return c.z < 1.1;
+        return c.screenY < H + 80;
       });
 
       // Particles
@@ -420,16 +421,16 @@ export default function Game() {
     /* ---- draw ---- */
     function draw() {
       cx.clearRect(0, 0, W, H);
-      drawSky();
-      drawRoad();
+      drawBackground();
 
-      // Sort all objects by z so far ones draw first
+      // Sort by screenY so higher items draw first
       const all = [
         ...G.obs.map((o) => ({ ...o, kind: "o" })),
         ...G.col.map((c) => ({ ...c, kind: "c" })),
       ];
-      all.sort((a, b) => a.z - b.z);
+      all.sort((a, b) => a.screenY - b.screenY);
       for (const item of all) {
+        if (item.screenY < -80) continue;
         if (item.kind === "o") drawObstacle(item);
         else drawCollectible(item);
       }
@@ -454,9 +455,9 @@ export default function Game() {
     }
 
     function start() {
-      G.run = true; G.sc = 0; G.tk = 0; G.spd = 0.7;
+      G.run = true; G.sc = 0; G.tk = 0; G.spd = 3.5;
       G.lane = 1; G.tgtLane = 1;
-      G.px = laneX(1, PLAYER_Z); G.py = 0; G.jmpV = 0; G.jmp = false;
+      G.px = laneX(1); G.playerY = 0; G.jmpV = 0; G.jmp = false;
       G.obs = []; G.col = []; G.ptc = [];
       G.dist = 0; G.best = G.best || 0; G.multi = 1; G.mTimer = 0;
       splashRef.current.style.display = "none";
@@ -490,7 +491,7 @@ export default function Game() {
       }
       // Swipe
       if (Math.abs(dy) > Math.abs(dx) && dy < -30) {
-        if (!G.jmp) { G.jmp = true; G.jmpV = -7; }
+        if (!G.jmp) { G.jmp = true; G.jmpV = -300; }
       } else if (dx > 30 && G.tgtLane < 2) G.tgtLane++;
       else if (dx < -30 && G.tgtLane > 0) G.tgtLane--;
     }, { passive: false });
@@ -500,7 +501,7 @@ export default function Game() {
       if (!G.run) return;
       if (e.key === "ArrowLeft" && G.tgtLane > 0) G.tgtLane--;
       if (e.key === "ArrowRight" && G.tgtLane < 2) G.tgtLane++;
-      if ((e.key === "ArrowUp" || e.key === " ") && !G.jmp) { G.jmp = true; G.jmpV = -7; }
+      if ((e.key === "ArrowUp" || e.key === " ") && !G.jmp) { G.jmp = true; G.jmpV = -300; }
     }
     document.addEventListener("keydown", handleKeydown);
 
