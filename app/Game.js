@@ -50,7 +50,7 @@ export default function Game() {
     ];
 
     const G = {
-      run: false, sc: 0, tk: 0, spd: 3.5,
+      run: false, sc: 0, tk: 0, spd: 1.0,
       lane: 1, tgtLane: 1, px: 0, playerY: 0,
       jmpV: 0, jmp: false,
       obs: [], col: [], ptc: [],
@@ -353,7 +353,7 @@ export default function Game() {
       const s = G.spd * dt * 60;
       G.dist += s;
       G.sc += Math.round(s * G.multi);
-      G.spd = Math.min(3.5 + G.dist * 0.0005, 8);
+      G.spd = Math.min(1.0 + G.dist * 0.0001, 2.5);
 
       if (G.mTimer > 0) { G.mTimer -= dt; if (G.mTimer <= 0) G.multi = 1; }
 
@@ -372,7 +372,7 @@ export default function Game() {
       if (Math.random() < 0.035 * s) spawnCol();
 
       // Move objects downward (toward player)
-      const ySpd = s * 3.5;
+      const ySpd = s * 2.0;
       for (const o of G.obs) o.screenY += ySpd;
       for (const c of G.col) c.screenY += ySpd;
 
@@ -455,7 +455,7 @@ export default function Game() {
     }
 
     function start() {
-      G.run = true; G.sc = 0; G.tk = 0; G.spd = 3.5;
+      G.run = true; G.sc = 0; G.tk = 0; G.spd = 1.0;
       G.lane = 1; G.tgtLane = 1;
       G.px = laneX(1); G.playerY = 0; G.jmpV = 0; G.jmp = false;
       G.obs = []; G.col = []; G.ptc = [];
