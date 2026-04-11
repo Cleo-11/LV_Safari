@@ -324,15 +324,15 @@ export default function Game() {
     /* ---- spawners (lane-based, screen-Y position) ---- */
     function spawnObs() {
       const lane = Math.floor(Math.random() * 3);
-      for (const o of G.obs) { if (o.lane === lane && o.screenY < -H * 0.2) return; }
-      for (const c of G.col) { if (c.lane === lane && c.screenY < -H * 0.15) return; }
+      for (const o of G.obs) { if (o.lane === lane && o.screenY < H * 0.35) return; }
+      for (const c of G.col) { if (c.lane === lane && c.screenY < H * 0.35) return; }
       G.obs.push({ lane, type: Math.floor(Math.random() * 3), screenY: -60 });
     }
 
     function spawnCol() {
       const lane = Math.floor(Math.random() * 3);
-      for (const o of G.obs) { if (o.lane === lane && o.screenY < -H * 0.15) return; }
-      for (const c of G.col) { if (c.lane === lane && c.screenY < -H * 0.15) return; }
+      for (const o of G.obs) { if (o.lane === lane && o.screenY < H * 0.35) return; }
+      for (const c of G.col) { if (c.lane === lane && c.screenY < H * 0.35) return; }
       G.col.push({
         lane,
         type: Math.floor(Math.random() * ITEM_TYPES.length),
@@ -392,13 +392,13 @@ export default function Game() {
         if (Math.abs(c.screenY - pY) < 30 && c.lane === G.tgtLane) {
           const cx2 = laneX(c.lane);
           const type = ITEM_TYPES[c.type];
+          G.tk++;
+          G.sc += 30 * G.multi;
           if (c.type === 0) {
-            G.tk++;
             G.multi = Math.min(G.multi + 1, 5);
             G.mTimer = 5;
             burst(cx2, c.screenY - 15, "#d4a44a", 14);
           } else {
-            G.sc += 30 * G.multi;
             burst(cx2, c.screenY - 15, type.accent, 10);
           }
           return false;
