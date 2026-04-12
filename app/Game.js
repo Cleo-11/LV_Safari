@@ -114,6 +114,13 @@ export default function Game() {
       }
     }
 
+    /* ---- load minted trunk config from localStorage ---- */
+    let trunkCfg = null;
+    try {
+      const raw = localStorage.getItem("lv_trunk");
+      if (raw) trunkCfg = JSON.parse(raw);
+    } catch (_) { /* ignore */ }
+
     /* ---- draw player with LV trunk ---- */
     function drawPlayer() {
       const targetX = laneX(G.tgtLane);
@@ -164,27 +171,172 @@ export default function Game() {
       cx.fillRect(-10, -4 + legKick, 10, 5);
       cx.fillRect(1, -4 - legKick, 10, 5);
 
-      // LV trunk — drawn LAST so it's always visible on the player's back
+      // ---- LV trunk on player's back ----
+      const tc = trunkCfg;
+      const tBase = tc ? tc.matColor : "#5c3a1e";
+      const tMetal = tc ? tc.hwMetal : "#d4a44a";
+      const tType = tc ? tc.trunkType : "monogram";
+      const tPat = tc ? tc.matPattern : "classic";
+      const tLock = tc ? tc.lockStyle : "slock";
+      const tCorner = tc ? tc.cornerStyle : "brass";
+      const tInitials = tc ? tc.initials : "";
+      const tSticker = tc ? tc.sticker : "none";
+
+      // Trunk dimensions on player
+      const bx = -13, bY = -44, bw = 26, bh = 22;
+
       // Shoulder straps
-      cx.fillStyle = "#8b6914";
-      cx.fillRect(-10, -44, 4, 22);
-      cx.fillRect(6, -44, 4, 22);
+      cx.fillStyle = tMetal + "88";
+      cx.fillRect(-10, bY, 4, bh);
+      cx.fillRect(6, bY, 4, bh);
+
       // Trunk body
-      cx.fillStyle = "#5c3a1e";
-      cx.beginPath(); cx.roundRect(-13, -44, 26, 22, 3); cx.fill();
-      // Gold border
-      cx.strokeStyle = "#d4a44a"; cx.lineWidth = 1.8; cx.stroke();
-      // Gold horizontal stripes
-      cx.fillStyle = "#d4a44a";
-      cx.fillRect(-11, -42, 22, 2);
-      cx.fillRect(-11, -34, 22, 2);
-      cx.fillRect(-11, -26, 22, 2);
-      // LV monogram centre
-      cx.font = "bold 10px sans-serif"; cx.textAlign = "center"; cx.fillStyle = "#d4a44a";
-      cx.fillText("LV", 0, -31);
-      // Trunk clasp
-      cx.fillStyle = "#b8860b";
-      cx.beginPath(); cx.roundRect(-4, -47, 8, 5, 2); cx.fill();
+      cx.fillStyle = tBase;
+      cx.beginPath(); cx.roundRect(bx, bY, bw, bh, 3); cx.fill();
+
+      // Trunk-type pattern overlay
+      cx.save();
+      cx.beginPath(); cx.roundRect(bx, bY, bw, bh, 3); cx.clip();
+      if (tType === "monogram") {
+        cx.font = "5px serif"; cx.textAlign = "center";
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.15;
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 3; c++) {
+            const sym = (r + c) % 2 === 0 ? "LV" : "\u2756";
+            cx.fillText(sym, bx + (c + 0.5) * (bw / 3), bY + (r + 0.5) * (bh / 3));
+          }
+        }
+        cx.globalAlpha = 1;
+      } else if (tType === "damier") {
+        const ds = 6;
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.15;
+        for (let r = 0; r < Math.ceil(bh / ds); r++) {
+          for (let c = 0; c < Math.ceil(bw / ds); c++) {
+            if ((r + c) % 2 === 0) cx.fillRect(bx + c * ds, bY + r * ds, ds, ds);
+          }
+        }
+        cx.globalAlpha = 1;
+      } else if (tType === "archival") {
+        cx.strokeStyle = tMetal; cx.globalAlpha = 0.2; cx.lineWidth = 0.8;
+        for (let i = -bw; i < bw + bh; i += 6) {
+          cx.beginPath(); cx.moveTo(bx + i, bY); cx.lineTo(bx + i + bh, bY + bh); cx.stroke();
+          cx.beginPath(); cx.moveTo(bx + i, bY + bh); cx.lineTo(bx + i + bh, bY); cx.stroke();
+        }
+        cx.globalAlpha = 1;
+      }
+
+      // Material pattern stripes
+      if (tPat === "classic") {
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.5;
+        cx.fillRect(bx + 2, bY + bh * 0.2, bw - 4, 1.5);
+        cx.fillRect(bx + 2, bY + bh * 0.5, bw - 4, 1.5);
+        cx.fillRect(bx + 2, bY + bh * 0.8, bw - 4, 1.5);
+        cx.globalAlpha = 1;
+      } else if (tPat === "bold") {
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.5;
+        for (const p of [0.15, 0.35, 0.5, 0.65, 0.85]) {
+          cx.fillRect(bx + 2, bY + bh * p, bw - 4, 1);
+        }
+        cx.globalAlpha = 1;
+      }
+      cx.restore();
+
+      // Border
+      cx.strokeStyle = tMetal; cx.lineWidth = 1.8;
+      cx.beginPath(); cx.roundRect(bx, bY, bw, bh, 3); cx.stroke();
+
+      // Lock
+      const lockCy = bY - 2;
+      if (tLock === "slock") {
+        cx.fillStyle = tMetal;
+        cx.beginPath(); cx.roundRect(-4, lockCy, 8, 5, 2); cx.fill();
+        cx.fillStyle = tBase; cx.font = "bold 4px serif"; cx.textAlign = "center";
+        cx.fillText("S", 0, lockCy + 4);
+      } else if (tLock === "pushlock") {
+        cx.fillStyle = tMetal;
+        cx.beginPath(); cx.arc(0, lockCy + 2.5, 3.5, 0, Math.PI * 2); cx.fill();
+        cx.strokeStyle = tBase; cx.lineWidth = 0.8;
+        cx.beginPath(); cx.arc(0, lockCy + 2.5, 2, 0, Math.PI * 2); cx.stroke();
+      } else if (tLock === "tumbler") {
+        cx.fillStyle = tMetal;
+        cx.beginPath(); cx.roundRect(-4, lockCy, 8, 5, 1); cx.fill();
+        cx.fillStyle = tBase;
+        cx.beginPath(); cx.arc(0, lockCy + 2, 1.2, 0, Math.PI * 2); cx.fill();
+      }
+
+      // Corner protectors
+      if (tCorner === "brass") {
+        for (const [ccx, ccy] of [[bx, bY], [bx + bw, bY], [bx, bY + bh], [bx + bw, bY + bh]]) {
+          cx.fillStyle = tMetal;
+          cx.beginPath(); cx.arc(ccx, ccy, 3, 0, Math.PI * 2); cx.fill();
+          cx.fillStyle = tBase;
+          cx.beginPath(); cx.arc(ccx, ccy, 1.5, 0, Math.PI * 2); cx.fill();
+        }
+      } else if (tCorner === "lozine") {
+        for (const [ccx, ccy] of [[bx, bY], [bx + bw, bY], [bx, bY + bh], [bx + bw, bY + bh]]) {
+          cx.fillStyle = tMetal;
+          cx.save(); cx.translate(ccx, ccy);
+          cx.beginPath(); cx.moveTo(-3, 0); cx.lineTo(0, -3); cx.lineTo(3, 0); cx.lineTo(0, 3); cx.closePath(); cx.fill();
+          cx.restore();
+        }
+      }
+
+      // LV monogram centre plate
+      cx.fillStyle = tMetal;
+      cx.beginPath(); cx.roundRect(-5, -37, 10, 7, 1); cx.fill();
+      cx.fillStyle = tBase;
+      cx.font = "bold 5px sans-serif"; cx.textAlign = "center";
+      cx.fillText("LV", 0, -32);
+
+      // Digital sticker (small)
+      if (tSticker === "flower") {
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.7;
+        cx.beginPath(); cx.arc(8, -28, 3, 0, Math.PI * 2); cx.fill();
+        cx.globalAlpha = 1;
+      } else if (tSticker === "diamond") {
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.7;
+        cx.save(); cx.translate(8, -28);
+        cx.beginPath(); cx.moveTo(0, -3); cx.lineTo(3, 0); cx.lineTo(0, 3); cx.lineTo(-3, 0); cx.closePath(); cx.fill();
+        cx.restore(); cx.globalAlpha = 1;
+      } else if (tSticker === "star") {
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.7;
+        cx.save(); cx.translate(8, -28);
+        cx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+          const ai = a + Math.PI / 5;
+          cx.lineTo(Math.cos(a) * 3.5, Math.sin(a) * 3.5);
+          cx.lineTo(Math.cos(ai) * 1.5, Math.sin(ai) * 1.5);
+        }
+        cx.closePath(); cx.fill();
+        cx.restore(); cx.globalAlpha = 1;
+      } else if (tSticker === "crown") {
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.7;
+        cx.save(); cx.translate(8, -28);
+        cx.beginPath();
+        cx.moveTo(-3, 2); cx.lineTo(-3, -1); cx.lineTo(-1.5, -3); cx.lineTo(0, -1);
+        cx.lineTo(1.5, -3); cx.lineTo(3, -1); cx.lineTo(3, 2); cx.closePath(); cx.fill();
+        cx.restore(); cx.globalAlpha = 1;
+      } else if (tSticker === "heart") {
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.7;
+        cx.save(); cx.translate(8, -28);
+        cx.beginPath();
+        cx.moveTo(0, 3);
+        cx.bezierCurveTo(-4, 0, -4, -3, -1, -3);
+        cx.bezierCurveTo(0, -3, 0, -2, 0, -1.5);
+        cx.bezierCurveTo(0, -2, 0, -3, 1, -3);
+        cx.bezierCurveTo(4, -3, 4, 0, 0, 3);
+        cx.fill();
+        cx.restore(); cx.globalAlpha = 1;
+      }
+
+      // Hot-stamped initials
+      if (tInitials) {
+        cx.font = "bold 5px serif"; cx.textAlign = "center";
+        cx.fillStyle = tMetal; cx.globalAlpha = 0.6;
+        cx.fillText(tInitials.toUpperCase(), 0, -24);
+        cx.globalAlpha = 1;
+      }
 
       cx.restore();
     }

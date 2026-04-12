@@ -489,6 +489,22 @@ export default function TrunkCustomizer() {
     setMinting(true);
     setTimeout(() => {
       const id = "0x" + Array.from({ length: 12 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      // Persist trunk config so the game can render it on the player
+      try {
+        localStorage.setItem("lv_trunk", JSON.stringify({
+          trunkType: trunkType.value,
+          material: material.value,
+          matColor: matColor.value,
+          matPattern: matPattern.value,
+          hwMetal: hwMetal.value,
+          lockStyle: lockStyle.value,
+          cornerStyle: cornerStyle.value,
+          handleStyle: handleStyle.value,
+          initials,
+          sticker: sticker.value,
+          tokenId: id,
+        }));
+      } catch (_) { /* quota / private mode */ }
       setMinted(id);
       setMinting(false);
     }, 1800);
