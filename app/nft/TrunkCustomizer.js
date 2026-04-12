@@ -489,21 +489,39 @@ export default function TrunkCustomizer() {
     setMinting(true);
     setTimeout(() => {
       const id = "0x" + Array.from({ length: 12 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      const trunkData = {
+        trunkType: trunkType.value,
+        trunkTypeLabel: trunkType.label,
+        material: material.value,
+        materialLabel: material.label,
+        matColor: matColor.value,
+        matColorLabel: matColor.label,
+        matPattern: matPattern.value,
+        matPatternLabel: matPattern.label,
+        hwMetal: hwMetal.value,
+        hwMetalLabel: hwMetal.label,
+        lockStyle: lockStyle.value,
+        lockStyleLabel: lockStyle.label,
+        cornerStyle: cornerStyle.value,
+        cornerStyleLabel: cornerStyle.label,
+        handleStyle: handleStyle.value,
+        handleStyleLabel: handleStyle.label,
+        initials,
+        sticker: sticker.value,
+        stickerLabel: sticker.label,
+        tokenId: id,
+        mintedAt: Date.now(),
+      };
       // Persist trunk config so the game can render it on the player
       try {
-        localStorage.setItem("lv_trunk", JSON.stringify({
-          trunkType: trunkType.value,
-          material: material.value,
-          matColor: matColor.value,
-          matPattern: matPattern.value,
-          hwMetal: hwMetal.value,
-          lockStyle: lockStyle.value,
-          cornerStyle: cornerStyle.value,
-          handleStyle: handleStyle.value,
-          initials,
-          sticker: sticker.value,
-          tokenId: id,
-        }));
+        localStorage.setItem("lv_trunk", JSON.stringify(trunkData));
+        // Also save to collection for marketplace
+        const existing = JSON.parse(localStorage.getItem("lv_trunks_collection") || "[]");
+        existing.push(trunkData);
+        localStorage.setItem("lv_trunks_collection", JSON.stringify(existing));
+        // Give user tokens for minting
+        const balance = parseInt(localStorage.getItem("lv_token_balance") || "1000", 10);
+        localStorage.setItem("lv_token_balance", String(balance));
       } catch (_) { /* quota / private mode */ }
       setMinted(id);
       setMinting(false);
@@ -750,11 +768,18 @@ export default function TrunkCustomizer() {
           <div style={{ fontFamily: "var(--font-serif)", fontSize: 10, letterSpacing: 6, color: gold }}>LOUIS VUITTON</div>
           <div style={{ fontFamily: "var(--font-serif)", fontSize: 18, letterSpacing: 1, color: "#f5e6c8" }}>NFT Trunk Studio</div>
         </div>
-        <a href="/" style={{
-          fontSize: 11, letterSpacing: 1, color: "rgba(212,164,74,0.5)",
-          textDecoration: "none", border: "1px solid rgba(212,164,74,0.2)",
-          padding: "6px 14px", borderRadius: 20,
-        }}>&larr; Game</a>
+        <div style={{ display: "flex", gap: 8 }}>
+          <a href="/marketplace" style={{
+            fontSize: 11, letterSpacing: 1, color: "rgba(212,164,74,0.5)",
+            textDecoration: "none", border: "1px solid rgba(212,164,74,0.2)",
+            padding: "6px 14px", borderRadius: 20,
+          }}>Marketplace</a>
+          <a href="/" style={{
+            fontSize: 11, letterSpacing: 1, color: "rgba(212,164,74,0.5)",
+            textDecoration: "none", border: "1px solid rgba(212,164,74,0.2)",
+            padding: "6px 14px", borderRadius: 20,
+          }}>&larr; Game</a>
+        </div>
       </div>
 
       <div style={{
