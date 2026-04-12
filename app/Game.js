@@ -575,6 +575,7 @@ export default function Game() {
         </div>
         <div style={{ marginTop: 20, fontFamily: "var(--font-sans)", color: "rgba(245,230,200,0.5)", fontSize: 12 }}>Swipe left/right or tap sides to switch lanes</div>
         <div style={{ fontFamily: "var(--font-sans)", color: "rgba(245,230,200,0.5)", fontSize: 12 }}>Swipe up to jump &bull; Collect luxury items</div>
+        <a href="/nft" style={{ marginTop: 20, fontFamily: "var(--font-sans)", color: "#d4a44a", fontSize: 12, letterSpacing: 2, textDecoration: "none", border: "1px solid rgba(212,164,74,0.35)", padding: "6px 16px", borderRadius: 20, pointerEvents: "auto" }}>CUSTOMIZE TRUNK</a>
       </div>
 
       {/* Game Over */}
@@ -591,6 +592,7 @@ export default function Game() {
           padding: "10px 28px", border: "1px solid #d4a44a", borderRadius: 24,
           color: "#d4a44a", fontSize: 14, cursor: "pointer", pointerEvents: "auto",
         }}>Run again</div>
+        <a href="/nft" style={{ marginTop: 12, fontFamily: "var(--font-sans)", color: "rgba(212,164,74,0.6)", fontSize: 11, letterSpacing: 2, textDecoration: "none", pointerEvents: "auto" }}>CUSTOMIZE YOUR TRUNK →</a>
       </div>
     </div>
   );
