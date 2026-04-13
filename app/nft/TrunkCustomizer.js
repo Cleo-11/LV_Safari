@@ -132,7 +132,7 @@ export default function TrunkCustomizer() {
     const tw = W * 0.62;
     const th = H * 0.54;
     const tx = W / 2;
-    const ty = H * 0.52;
+    const ty = H / 2 + th / 2;
 
     const base = matColor.value;
     const metal = hwMetal.value;
